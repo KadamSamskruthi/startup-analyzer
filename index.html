@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RiskLens — Startup Analyzer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0f;
+      --surface: #16161a;
+      --surface2: #1e1e24;
+      --border: rgba(255,255,255,0.08);
+      --border-hover: rgba(255,255,255,0.15);
+      --text: #f0ede8;
+      --text-muted: #8a8794;
+      --text-dim: #4a4858;
+      --accent: #e8c87a;
+      --accent-dim: rgba(232,200,122,0.12);
+      --low: #5ec87a;
+      --low-bg: rgba(94,200,122,0.1);
+      --medium: #e8c87a;
+      --medium-bg: rgba(232,200,122,0.1);
+      --high: #e87a7a;
+      --high-bg: rgba(232,122,122,0.1);
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── LAYOUT ── */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 60px;
+      background: rgba(13,13,15,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-brand {
+      font-family: 'DM Serif Display', serif;
+      font-size: 20px; color: var(--accent); letter-spacing: -0.3px;
+    }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .nav-user { font-size: 13px; color: var(--text-muted); }
+    .nav-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--accent-dim); border: 1px solid var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 600; color: var(--accent);
+    }
+    .btn-nav {
+      background: none; border: 1px solid var(--border);
+      color: var(--text-muted); padding: 6px 16px;
+      border-radius: 20px; font-size: 13px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-nav:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 80px 2rem 4rem; text-align: center;
+      background:
+        radial-gradient(ellipse 60% 40% at 50% 20%, rgba(232,200,122,0.06) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 60% at 80% 80%, rgba(94,200,122,0.04) 0%, transparent 60%);
+    }
+    .hero-eyebrow {
+      font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 1.5rem;
+      padding: 5px 14px; border: 1px solid rgba(232,200,122,0.3);
+      border-radius: 20px; display: inline-block;
+    }
+    .hero-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(3rem, 7vw, 5.5rem);
+      line-height: 1.05; letter-spacing: -1px;
+      color: var(--text); margin-bottom: 1.5rem;
+    }
+    .hero-title em { font-style: italic; color: var(--accent); }
+    .hero-sub {
+      font-size: 17px; color: var(--text-muted); max-width: 480px;
+      margin: 0 auto 2.5rem; font-weight: 300;
+    }
+    .hero-ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      background: var(--accent); color: #0d0d0f;
+      padding: 12px 28px; border-radius: 8px;
+      font-weight: 600; font-size: 14px; border: none; cursor: pointer;
+      transition: all 0.2s; letter-spacing: 0.02em;
+    }
+    .btn-primary:hover { background: #f0d68a; transform: translateY(-1px); }
+    .btn-secondary {
+      background: none; color: var(--text);
+      padding: 12px 28px; border-radius: 8px;
+      font-weight: 500; font-size: 14px;
+      border: 1px solid var(--border-hover); cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover { border-color: var(--text-muted); }
+
+    .hero-stats {
+      display: flex; gap: 3rem; margin-top: 5rem;
+      justify-content: center; flex-wrap: wrap;
+    }
+    .stat { text-align: center; }
+    .stat-num {
+      font-family: 'DM Serif Display', serif;
+      font-size: 2rem; color: var(--accent);
+    }
+    .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+    /* ── AUTH PAGE ── */
+    .auth-wrap {
+      min-height: 100vh; display: flex; align-items: center;
+      justify-content: center; padding: 80px 1rem 2rem;
+      background:
+        radial-gradient(ellipse 50% 50% at 30% 50%, rgba(232,200,122,0.04) 0%, transparent 60%);
+    }
+    .auth-box {
+      width: 100%; max-width: 420px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 2.5rem;
+    }
+    .auth-logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px; color: var(--accent); margin-bottom: 0.5rem;
+    }
+    .auth-heading { font-size: 22px; font-weight: 500; margin-bottom: 0.25rem; }
+    .auth-sub-text { font-size: 14px; color: var(--text-muted); margin-bottom: 2rem; }
+    .auth-tabs { display: flex; gap: 0; margin-bottom: 2rem; background: var(--surface2); border-radius: var(--radius-sm); padding: 4px; }
+    .auth-tab {
+      flex: 1; padding: 8px; text-align: center; font-size: 13px; font-weight: 500;
+      border-radius: 6px; cursor: pointer; color: var(--text-muted); transition: all 0.2s;
+      border: none; background: none;
+    }
+    .auth-tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+
+    .field { margin-bottom: 1rem; }
+    .field label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.04em; text-transform: uppercase; }
+    .field input {
+      width: 100%; padding: 10px 14px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text); font-size: 14px;
+      font-family: 'DM Sans', sans-serif; transition: border-color 0.2s;
+    }
+    .field input:focus { outline: none; border-color: var(--accent); }
+    .field input::placeholder { color: var(--text-dim); }
+
+    .btn-full {
+      width: 100%; padding: 11px; background: var(--accent); color: #0d0d0f;
+      border: none; border-radius: var(--radius-sm); font-weight: 600;
+      font-size: 14px; cursor: pointer; margin-top: 0.5rem; transition: all 0.2s;
+    }
+    .btn-full:hover { background: #f0d68a; }
+    .btn-full:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .error-text { font-size: 12px; color: var(--high); margin-top: 0.75rem; text-align: center; }
+    .success-text { font-size: 12px; color: var(--low); margin-top: 0.75rem; text-align: center; }
+
+    /* ── APP PAGE ── */
+    .app-layout {
+      max-width: 860px; margin: 0 auto;
+      padding: 80px 1.5rem 4rem;
+    }
+    .app-header { margin-bottom: 2.5rem; }
+    .app-header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 2.2rem; margin-bottom: 0.5rem;
+    }
+    .app-header p { color: var(--text-muted); font-size: 15px; }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.75rem;
+    }
+    .card-title { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1.25rem; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-grid .full { grid-column: 1 / -1; }
+
+    .field select, .field textarea {
+      width: 100%; padding: 10px 14px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text); font-size: 14px;
+      font-family: 'DM Sans', sans-serif; transition: border-color 0.2s;
+      appearance: none;
+    }
+    .field select:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+    .field textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
+
+    .select-wrap { position: relative; }
+    .select-wrap::after {
+      content: '▾'; position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%); color: var(--text-muted);
+      pointer-events: none; font-size: 12px;
+    }
+    .select-wrap select { padding-right: 32px; }
+
+    .analyze-btn {
+      width: 100%; padding: 13px; background: var(--accent); color: #0d0d0f;
+      border: none; border-radius: var(--radius-sm); font-weight: 600;
+      font-size: 15px; cursor: pointer; margin-top: 1.25rem; transition: all 0.2s;
+      letter-spacing: 0.02em;
+    }
+    .analyze-btn:hover { background: #f0d68a; transform: translateY(-1px); }
+    .analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ── RESULT ── */
+    .result-section { margin-top: 2rem; }
+    .result-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      animation: slideUp 0.4s ease;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-header { padding: 1.75rem; border-bottom: 1px solid var(--border); }
+    .result-top { display: flex; align-items: flex-start; gap: 1.5rem; }
+    .score-ring {
+      flex-shrink: 0; width: 80px; height: 80px;
+      border-radius: 50%; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      border: 2px solid currentColor;
+    }
+    .score-ring.low { color: var(--low); background: var(--low-bg); }
+    .score-ring.medium { color: var(--medium); background: var(--medium-bg); }
+    .score-ring.high { color: var(--high); background: var(--high-bg); }
+    .score-number { font-family: 'DM Serif Display', serif; font-size: 26px; line-height: 1; }
+    .score-out { font-size: 10px; opacity: 0.7; margin-top: 1px; }
+
+    .result-meta { flex: 1; }
+    .risk-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+      letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 10px;
+    }
+    .risk-badge.low { background: var(--low-bg); color: var(--low); }
+    .risk-badge.medium { background: var(--medium-bg); color: var(--medium); }
+    .risk-badge.high { background: var(--high-bg); color: var(--high); }
+    .result-verdict { font-size: 16px; font-weight: 500; margin-bottom: 6px; }
+    .result-innovation { font-size: 13px; color: var(--text-muted); }
+
+    .result-body { padding: 1.75rem; display: grid; gap: 1.5rem; }
+    .result-section-block {}
+    .result-section-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
+    }
+    .result-text { font-size: 14px; color: var(--text-muted); line-height: 1.8; }
+
+    /* ── HISTORY ── */
+    .history-section { margin-top: 2.5rem; }
+    .history-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+    .history-header h2 { font-size: 16px; font-weight: 500; }
+    .history-list { display: grid; gap: 8px; }
+    .history-item {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 1rem 1.25rem;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; transition: border-color 0.2s;
+    }
+    .history-item:hover { border-color: var(--border-hover); }
+    .history-name { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
+    .history-meta { font-size: 12px; color: var(--text-muted); }
+    .history-right { display: flex; align-items: center; gap: 10px; }
+    .score-pill {
+      font-family: 'DM Serif Display', serif;
+      font-size: 15px;
+    }
+    .score-pill.low { color: var(--low); }
+    .score-pill.medium { color: var(--medium); }
+    .score-pill.high { color: var(--high); }
+
+    .btn-delete {
+      background: none; border: none; color: var(--text-dim);
+      cursor: pointer; padding: 4px; border-radius: 4px; font-size: 14px;
+      transition: color 0.2s;
+    }
+    .btn-delete:hover { color: var(--high); }
+
+    /* ── LOADING ── */
+    .loading-overlay {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(13,13,15,0.7); backdrop-filter: blur(4px);
+      align-items: center; justify-content: center; flex-direction: column; gap: 1rem;
+    }
+    .loading-overlay.active { display: flex; }
+    .spinner {
+      width: 40px; height: 40px; border-radius: 50%;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 14px; color: var(--text-muted); }
+
+    /* ── EMPTY STATE ── */
+    .empty-state { text-align: center; padding: 3rem; color: var(--text-dim); font-size: 14px; }
+
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .form-grid .full { grid-column: 1; }
+      .result-top { flex-direction: column; align-items: center; text-align: center; }
+      .hero-stats { gap: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Analyzing your startup...</div>
+</div>
+
+<!-- Navigation -->
+<nav id="main-nav" style="display:none">
+  <div class="nav-brand">RiskLens</div>
+  <div class="nav-right">
+    <span class="nav-user" id="nav-user-name"></span>
+    <div class="nav-avatar" id="nav-avatar">?</div>
+    <button class="btn-nav" onclick="logout()">Sign out</button>
+  </div>
+</nav>
+<nav id="auth-nav">
+  <div class="nav-brand">RiskLens</div>
+  <div class="nav-right">
+    <button class="btn-nav" onclick="showPage('auth')">Sign in</button>
+  </div>
+</nav>
+
+<!-- HOME PAGE -->
+<div id="page-home" class="page active">
+  <div class="hero">
+    <div class="hero-eyebrow">AI-Powered Risk Intelligence</div>
+    <h1 class="hero-title">Know your risks<br/><em>before</em> you launch</h1>
+    <p class="hero-sub">Deep startup analysis powered by OpenAI. Get risk scores, predict failures, and receive actionable advice before you invest.</p>
+    <div class="hero-ctas">
+      <button class="btn-primary" onclick="showPage('auth')">Start analyzing free</button>
+      <button class="btn-secondary" onclick="showPage('auth')">Sign in →</button>
+    </div>
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-num">GPT-4o</div>
+        <div class="stat-label">Powered by OpenAI</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">0–100</div>
+        <div class="stat-label">Risk score system</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">7+</div>
+        <div class="stat-label">Analysis dimensions</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH PAGE -->
+<div id="page-auth" class="page">
+  <div class="auth-wrap">
+    <div class="auth-box">
+      <div class="auth-logo">RiskLens</div>
+      <div class="auth-heading">Welcome back</div>
+      <div class="auth-sub-text">Sign in or create an account to continue</div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign in</button>
+        <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Register</button>
+      </div>
+
+      <!-- Login form -->
+      <div id="form-login">
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="login-email" placeholder="you@example.com" />
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
+        </div>
+        <div class="error-text" id="login-error"></div>
+        <button class="btn-full" onclick="doLogin()">Sign in</button>
+      </div>
+
+      <!-- Register form -->
+      <div id="form-register" style="display:none">
+        <div class="field">
+          <label>Full name</label>
+          <input type="text" id="reg-name" placeholder="Jane Doe" />
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="reg-email" placeholder="you@example.com" />
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="reg-password" placeholder="Min. 6 characters" onkeydown="if(event.key==='Enter')doRegister()" />
+        </div>
+        <div class="error-text" id="reg-error"></div>
+        <button class="btn-full" onclick="doRegister()">Create account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APP PAGE -->
+<div id="page-app" class="page">
+  <div class="app-layout">
+    <div class="app-header">
+      <h1>Analyze a startup</h1>
+      <p>Fill in the details below and let AI assess the risk profile</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Startup details</div>
+      <div class="form-grid">
+        <div class="field full">
+          <label>Startup name</label>
+          <input type="text" id="s-name" placeholder="e.g. EcoDeliver" />
+        </div>
+        <div class="field">
+          <label>Industry</label>
+          <div class="select-wrap">
+            <select id="s-industry">
+              <option value="">Select industry</option>
+              <option>Food & Beverage</option>
+              <option>Health & Wellness</option>
+              <option>EdTech</option>
+              <option>FinTech</option>
+              <option>E-commerce</option>
+              <option>SaaS / B2B</option>
+              <option>AgriTech</option>
+              <option>CleanTech</option>
+              <option>AI / Machine Learning</option>
+              <option>Logistics & Delivery</option>
+              <option>Real Estate</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Budget range</label>
+          <div class="select-wrap">
+            <select id="s-budget">
+              <option value="">Select budget</option>
+              <option>Under $10K</option>
+              <option>$10K – $50K</option>
+              <option>$50K – $200K</option>
+              <option>$200K – $1M</option>
+              <option>Over $1M</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Market demand</label>
+          <div class="select-wrap">
+            <select id="s-demand">
+              <option value="">Select level</option>
+              <option>Very Low</option>
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+              <option>Very High</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Competition level</label>
+          <div class="select-wrap">
+            <select id="s-competition">
+              <option value="">Select level</option>
+              <option>Very Low</option>
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+              <option>Very High</option>
+            </select>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Idea description</label>
+          <textarea id="s-desc" placeholder="Describe what your startup does, the problem it solves, your target audience, and how you plan to monetize..."></textarea>
+        </div>
+      </div>
+      <button class="analyze-btn" id="analyze-btn" onclick="analyzeStartup()">→ Analyze startup</button>
+    </div>
+
+    <div id="result-area"></div>
+
+    <div class="history-section" id="history-section" style="display:none">
+      <div class="history-header">
+        <h2>Previous analyses</h2>
+      </div>
+      <div class="history-list" id="history-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API = '';  // empty = same origin. Change to 'http://localhost:5000' for local dev
+
+  let token = localStorage.getItem('rl_token');
+  let currentUser = null;
+
+  // ── UTILS ──
+  function setLoading(show, text = 'Processing...') {
+    document.getElementById('loading').classList.toggle('active', show);
+    document.getElementById('loading-text').textContent = text;
+  }
+  function levelClass(level) {
+    if (!level) return 'medium';
+    return level.toLowerCase();
+  }
+
+  // ── PAGE ROUTING ──
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    document.getElementById('main-nav').style.display = (name === 'app') ? 'flex' : 'none';
+    document.getElementById('auth-nav').style.display = (name === 'app') ? 'none' : 'flex';
+    window.scrollTo(0, 0);
+  }
+
+  // ── AUTH TABS ──
+  function switchTab(tab) {
+    document.getElementById('form-login').style.display = tab === 'login' ? '' : 'none';
+    document.getElementById('form-register').style.display = tab === 'register' ? '' : 'none';
+    document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+    document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+    document.getElementById('login-error').textContent = '';
+    document.getElementById('reg-error').textContent = '';
+  }
+
+  function setNavUser(user) {
+    const initials = user.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    document.getElementById('nav-avatar').textContent = initials;
+    document.getElementById('nav-user-name').textContent = user.name;
+  }
+
+  // ── REGISTER ──
+  async function doRegister() {
+    const name = document.getElementById('reg-name').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value;
+    const errEl = document.getElementById('reg-error');
+    errEl.textContent = '';
+    if (!name || !email || !password) { errEl.textContent = 'All fields are required.'; return; }
+    setLoading(true, 'Creating account...');
+    try {
+      const r = await fetch(`${API}/api/auth/register`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password })
+      });
+      const data = await r.json();
+      if (!r.ok) { errEl.textContent = data.error || 'Registration failed'; return; }
+      token = data.token;
+      currentUser = data.user;
+      localStorage.setItem('rl_token', token);
+      setNavUser(currentUser);
+      showPage('app');
+      loadHistory();
+    } catch (e) {
+      errEl.textContent = 'Network error. Is the server running?';
+    } finally { setLoading(false); }
+  }
+
+  // ── LOGIN ──
+  async function doLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    const errEl = document.getElementById('login-error');
+    errEl.textContent = '';
+    if (!email || !password) { errEl.textContent = 'Email and password required.'; return; }
+    setLoading(true, 'Signing in...');
+    try {
+      const r = await fetch(`${API}/api/auth/login`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await r.json();
+      if (!r.ok) { errEl.textContent = data.error || 'Login failed'; return; }
+      token = data.token;
+      currentUser = data.user;
+      localStorage.setItem('rl_token', token);
+      setNavUser(currentUser);
+      showPage('app');
+      loadHistory();
+    } catch (e) {
+      errEl.textContent = 'Network error. Is the server running?';
+    } finally { setLoading(false); }
+  }
+
+  // ── LOGOUT ──
+  function logout() {
+    token = null; currentUser = null;
+    localStorage.removeItem('rl_token');
+    document.getElementById('result-area').innerHTML = '';
+    document.getElementById('history-section').style.display = 'none';
+    showPage('home');
+  }
+
+  // ── ANALYZE ──
+  async function analyzeStartup() {
+    const startupName = document.getElementById('s-name').value.trim();
+    const industry = document.getElementById('s-industry').value;
+    const budget = document.getElementById('s-budget').value;
+    const marketDemand = document.getElementById('s-demand').value;
+    const competition = document.getElementById('s-competition').value;
+    const description = document.getElementById('s-desc').value.trim();
+
+    if (!startupName || !industry || !budget || !marketDemand || !competition || !description) {
+      document.getElementById('result-area').innerHTML = `<p class="error-text" style="margin-top:1rem">Please fill in all fields.</p>`;
+      return;
+    }
+
+    const btn = document.getElementById('analyze-btn');
+    btn.disabled = true;
+    setLoading(true, 'AI is analyzing your startup...');
+
+    try {
+      const r = await fetch(`${API}/api/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ startupName, industry, budget, marketDemand, competition, description })
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Analysis failed');
+      renderResult(data, startupName);
+      loadHistory();
+    } catch (e) {
+      document.getElementById('result-area').innerHTML = `<p class="error-text" style="margin-top:1rem">${e.message}</p>`;
+    } finally {
+      btn.disabled = false;
+      setLoading(false);
+    }
+  }
+
+  function renderResult(d, name) {
+    const cls = levelClass(d.riskLevel || d.risk_level);
+    const score = d.riskScore || d.risk_score;
+    const level = d.riskLevel || d.risk_level;
+    const verdict = d.verdict;
+    const innovation = d.innovationComment || d.innovation_comment;
+    const risks = d.risks;
+    const predictions = d.predictions;
+    const suggestions = d.suggestions;
+
+    document.getElementById('result-area').innerHTML = `
+      <div class="result-section">
+        <div class="result-card">
+          <div class="result-header">
+            <div class="result-top">
+              <div class="score-ring ${cls}">
+                <div class="score-number">${score}</div>
+                <div class="score-out">/100</div>
+              </div>
+              <div class="result-meta">
+                <div class="risk-badge ${cls}">● ${level} Risk</div>
+                <div class="result-verdict">${verdict}</div>
+                <div class="result-innovation">${innovation}</div>
+              </div>
+            </div>
+          </div>
+          <div class="result-body">
+            <div class="result-section-block">
+              <div class="result-section-label">Identified risks</div>
+              <div class="result-text">${risks}</div>
+            </div>
+            <div class="result-section-block">
+              <div class="result-section-label">Real-world predictions</div>
+              <div class="result-text">${predictions}</div>
+            </div>
+            <div class="result-section-block">
+              <div class="result-section-label">Recommendations</div>
+              <div class="result-text">${suggestions}</div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    document.getElementById('result-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ── HISTORY ──
+  async function loadHistory() {
+    try {
+      const r = await fetch(`${API}/api/analyze/history`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await r.json();
+      if (!r.ok || !data.length) { document.getElementById('history-section').style.display = 'none'; return; }
+      document.getElementById('history-section').style.display = '';
+      const list = document.getElementById('history-list');
+      list.innerHTML = data.map(a => {
+        const cls = levelClass(a.risk_level);
+        const date = new Date(a.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        return `
+          <div class="history-item" onclick="loadAnalysis(${a.id})">
+            <div>
+              <div class="history-name">${a.startup_name}</div>
+              <div class="history-meta">${a.industry} · ${date}</div>
+            </div>
+            <div class="history-right">
+              <span class="score-pill ${cls}">${a.risk_score}/100</span>
+              <span class="risk-badge ${cls}" style="font-size:11px">${a.risk_level}</span>
+              <button class="btn-delete" onclick="event.stopPropagation();deleteAnalysis(${a.id})">✕</button>
+            </div>
+          </div>`;
+      }).join('');
+    } catch (e) { /* silently fail */ }
+  }
+
+  async function loadAnalysis(id) {
+    setLoading(true, 'Loading analysis...');
+    try {
+      const r = await fetch(`${API}/api/analyze/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await r.json();
+      if (r.ok) {
+        renderResult(data, data.startup_name);
+      }
+    } catch (e) {}
+    finally { setLoading(false); }
+  }
+
+  async function deleteAnalysis(id) {
+    if (!confirm('Delete this analysis?')) return;
+    try {
+      await fetch(`${API}/api/analyze/${id}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
+      });
+      loadHistory();
+    } catch (e) {}
+  }
+
+  // ── AUTO LOGIN ──
+  (async function init() {
+    if (token) {
+      try {
+        const r = await fetch(`${API}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (r.ok) {
+          currentUser = await r.json();
+          setNavUser(currentUser);
+          showPage('app');
+          loadHistory();
+          return;
+        }
+      } catch (e) {}
+      localStorage.removeItem('rl_token');
+      token = null;
+    }
+    showPage('home');
+  })();
+</script>
+</body>
+</html>
